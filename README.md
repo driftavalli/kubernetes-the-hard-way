@@ -1,14 +1,6 @@
 # Kubernetes The Hard Way On KVM
 
-This tutorial walks you through setting up Kubernetes the hard way. This guide is not for people looking for a fully automated command to bring up a Kubernetes cluster. If that's you then check out [Google Container Engine](https://cloud.google.com/container-engine), or the [Getting Started Guides](http://kubernetes.io/docs/getting-started-guides/).
-
-Kubernetes The Hard Way is optimized for learning, which means taking the long route to ensure you understand each task required to bootstrap a Kubernetes cluster.
-
-> The results of this tutorial should not be viewed as production ready, and may receive limited support from the community, but don't let that stop you from learning!
-
-## Target Audience
-
-The target audience for this tutorial is someone planning to support a production Kubernetes cluster and wants to understand how everything fits together.
+Fork of Kelsey's Hightower [Kubernetes the Hard Way](https://github.com/kelseyhightower/kubernetes-the-hard-way) on a single machine KVM setup. Recreated as much of the support infrastructure as possible.
 
 ## Cluster Details
 
@@ -21,7 +13,7 @@ Kubernetes The Hard Way guides you through bootstrapping a highly available Kube
 
 ## Labs
 
-This tutorial assumes you have access to the [Google Cloud Platform](https://cloud.google.com). While GCP is used for basic infrastructure requirements the lessons learned in this tutorial can be applied to other platforms.
+This tutorial assumes you have access to an Ubuntu machine with sufficient resources (tested on an Intel Avoton board with 32GB of RAM, less should work with reduction in RAM assigned to the VMs. 
 
 * [Prerequisites](docs/01-prerequisites.md)
 * [Installing the Client Tools](docs/02-client-tools.md)
