@@ -16,9 +16,9 @@ Estimated cost: Free (If you have an appropriate machine)
   #### [bridge-utils](https://wiki.linuxfoundation.org/networking/bridge)
   Bridge administration utilities that can be used to create and manage bridges (switches):
   
-    ```
+    
     sudo apt install bridge-utils
-    ```
+    
     
   #### [genisoimage](https://wiki.debian.org/genisoimage)
   CLI for creating ISO images:
