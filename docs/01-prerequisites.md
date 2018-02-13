@@ -2,12 +2,13 @@
 
 ## Google Cloud Platform
 
-This tutorial leverages open source applications (KVM, Keepalived, BIND) to replicate KTHW on a single box, using it as a learning tool.
+This is based on Kelsey Hightowers Kubernetes the hard war but instead leverages KVM, Keepalived, BIND (all open source and free applications) to replicate KTHW on a single box, using it as a learning tool.
 
 Estimated cost: Free (If you have an appropriate machine)
 
 ## Required tools
-These are the tools used to achieve the setup. It seems some (virt-install/virsh) duplicate functions but I've installed them anyways. I have added the links I that seemed most relevant but may not necessarily be the only/best link. 
+The intent is to replicate KTHW as closely as possible; to this end, keepalived is used to provide loadbalancing across the controller hosts and BIND is used to provide name resolution for the IP address. In total, we will setup 4 extra VMs for the loadbalancer and DNS server.
+These are the tools used to create the VM's on the KVM host. I have added the links I that seemed most relevant but may not necessarily be the only/best link. Install these on the KVM host.
 * bridge-utils
 * genisoimage
 * qemu-uitls
