@@ -1,58 +1,43 @@
 # Provisioning Compute Resources
 
-Kubernetes requires a set of machines to host the Kubernetes control plane and the worker nodes where containers are ultimately run. In this lab you will provision the compute resources required for running a secure and highly available Kubernetes cluster across a single [compute zone](https://cloud.google.com/compute/docs/regions-zones/regions-zones).
-
-> Ensure a default compute zone and region have been set as described in the [Prerequisites](01-prerequisites.md#set-a-default-compute-region-and-zone) lab.
+Kubernetes requires a set of machines to host the Kubernetes control plane and the worker nodes where containers are ultimately run. This lab provisions the compute resources required for running a secure and highly available Kubernetes cluster on a single physical machine running [Ubuntu Server](https://www.ubuntu.com/download/server) with KVM as the hypervisor. The lab uses [Ubuntu cloud images](http://cloud-images.ubuntu.com/) to make provisioning the VMs fast; these are pre-installed images and facilitates getting a working VM very quickly. This way, the lab can be run multiple times very quickly rather than spending the time required for installing the OS. The lab also uses [cloud-init](https://cloud-init.io/)
 
 ## Networking
 
-The Kubernetes [networking model](https://kubernetes.io/docs/concepts/cluster-administration/networking/#kubernetes-model) assumes a flat network in which containers and nodes can communicate with each other. In cases where this is not desired [network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) can limit how groups of containers are allowed to communicate with each other and external network endpoints.
+This lab creates a switch on the host to which the cluster belongs. To isolate the network from the local network and to also use a similar address scheme as the [original](https://github.com/kelseyhightower/kubernetes-the-hard-way) tutorial, I have used [vyos](https://vyos.io/) in between the cluster network and the external switch. vyos will be connected to two bridges:
+* br0 (connected to local network for internet connectivity)
+* kube1 (KTHW cluster switch)
 
-> Setting up network policies is out of scope for this tutorial.
+### Cluster Network
 
-### Virtual Private Cloud Network
-
-In this section a dedicated [Virtual Private Cloud](https://cloud.google.com/compute/docs/networks-and-firewalls#networks) (VPC) network will be setup to host the Kubernetes cluster.
-
-Create the `kubernetes-the-hard-way` custom VPC network:
+The configuration for /etc/network/interfaces is given below for both switches:
 
 ```
-gcloud compute networks create kubernetes-the-hard-way --mode custom
+auto br0
+iface br1 inet static
+        address 192.168.2.250
+        netmask 255.255.255.255
+        network 192.168.2.250
+        broadcast 192.168.2.255
+        gateway 192.168.2.1
+        dns-nameservers 10.240.0.31 10.240.0.32
+        bridge_ports enp8s0
+        bridge_stp off
+        bridge_fd 0
+
+auto kube1
+iface kube1 inet static
+        address 10.240.0.250
+        netmask 255.255.255.0
+        network 10.240.0.0
+        broadcast 10.240.0.255
+        gateway 10.240.0.1
+        dns-nameservers 10.240.0.31 10.240.0.32
 ```
 
-A [subnet](https://cloud.google.com/compute/docs/vpc/#vpc_networks_and_subnets) must be provisioned with an IP address range large enough to assign a private IP address to each node in the Kubernetes cluster.
+We will be using the same `10.240.0.0/24` IP address range which can host up to 254 compute instances.
 
-Create the `kubernetes` subnet in the `kubernetes-the-hard-way` VPC network:
-
-```
-gcloud compute networks subnets create kubernetes \
-  --network kubernetes-the-hard-way \
-  --range 10.240.0.0/24
-```
-
-> The `10.240.0.0/24` IP address range can host up to 254 compute instances.
-
-### Firewall Rules
-
-Create a firewall rule that allows internal communication across all protocols:
-
-```
-gcloud compute firewall-rules create kubernetes-the-hard-way-allow-internal \
-  --allow tcp,udp,icmp \
-  --network kubernetes-the-hard-way \
-  --source-ranges 10.240.0.0/24,10.200.0.0/16
-```
-
-Create a firewall rule that allows external SSH, ICMP, and HTTPS:
-
-```
-gcloud compute firewall-rules create kubernetes-the-hard-way-allow-external \
-  --allow tcp:22,tcp:6443,icmp \
-  --network kubernetes-the-hard-way \
-  --source-ranges 0.0.0.0/0
-```
-
-> An [external load balancer](https://cloud.google.com/compute/docs/load-balancing/network/) will be used to expose the Kubernetes API Servers to remote clients.
+> For a loadbalancer, we will be using [keepalived](http://www.keepalived.org/) to expose the Kubernetes API Servers.
 
 List the firewall rules in the `kubernetes-the-hard-way` VPC network:
 
