@@ -1,0 +1,25 @@
+#cloud-config
+users:
+  - name: dude
+    gecos: dude
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    shell: /bin/bash
+    groups: sudo
+    lock_passwd: false
+    passwd: **** $6$rounds=4096$gJkBp0nHY/ArgSZ$0qFGzy93cHYEjieMNI7w6EORJzEpAVid83KnzB.OOgm3zm2kX98cG4.AzaE6GUb8x2rfLfXjwKr6WpcEFUx.f/
+    ssh-authorized-keys:
+      - ssh-rsa ****
+      - ssh-rsa ****
+manage_etc_hosts: localhost
+package_upgrade: true
+power_state:
+  delay: "+2"
+  mode: reboot
+  message: Bye Bye
+  timeout: 5
+  condition: True
+write_files:
+  - path: /etc/modprobe.d/dummy.conf
+    content: options dummy numdummies=1
+  - path: /etc/modules-load.d/dummy.conf
+    content: dummy
