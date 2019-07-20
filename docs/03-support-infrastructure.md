@@ -3,7 +3,7 @@
 We'll be using KVM as the hypervisor. Installation of KVM won't be covered here as there are lots of good articles that describe how to do that. Check [KVM Installation](https://help.ubuntu.com/community/KVM/Installation) for how to get started.
 
 ## Create bridge
-We will configure our nic to act as a bridge to which we will connect the VMs to. This allows the possibility of running multiple clusters on the same machine. The config below is how the server has been setup however the network configuration to enable this is out of scope and won't be covered here. 
+We will configure our nic to act as a bridge to which we will connect the VMs to. This allows the possibility of running multiple clusters on the same machine. The config below uses [netplan](https://netplan.io) to setup the bridge on the system, however the network configuration to enable this is out of scope and won't be covered here. 
 
 ```
 cat <<EOF | sudo tee /etc/netplan/01-netcfg.yaml
@@ -25,6 +25,7 @@ network:
         addresses: [ 1.1.1.1, 9.9.9.9 ]
         interfaces:
             - enp3s0
+EOF
 ```
 Then to activate the configuration, run
 
@@ -33,14 +34,82 @@ Then to activate the configuration, run
 `sudo netplan apply`
 
 If everything is setup correctly, you should have a bridge assigned with a static IP.
+
 ## Create Base Image for installation of [Keepalived](http://www.keepalived.org)
-* We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/).
+We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. A lot of the heavy lifting for setting up the server will also be done using [cloud-init]() which the cloud images support. While not particularly suited for configuration management, we will use it here for now (more suitable options for configuration management for servers include [ansible](https://www.ansible.com/), [chef](https://www.chef.io/), [puppet](https://puppet.com/). Eventually, we will probably replace the setup with [terraform](https://www.terraform.io/) which should make setting up the servers a breeze. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/).
 
     `wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img`
 
-* Install the VM
+### Install the VM
 
-Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version
+#### Create `user-data`, `meta-data` and `network-config` files.
+Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version from the [keepalived]() website. Create password hash using `mkpasswd --method=SHA-512 --rounds=4096`, requires installing `whois`: `sudo apt install whois`. Replace italicized bold variables with your own.
+
+```
+cat <<EOF | tee user-data
+#cloud-config
+users:
+  - name: *`USERNAME`*
+    gecos: USERNAME
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    shell: /bin/bash
+    groups: sudo
+    lock_passwd: false
+    
+    passwd: $6$rounds=4096$tDcdPTt8I0DEpK$VzPyIiScAcUTQ.aPIepj2oPlr3yIB9xVRnDsdom//bOjuhw68X0wfh/6g8dpz3yuyyBiacRMfq5oVdnmKOrFX.
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDn442Z+YMoKHkt7T56cA1tb2yZBO8h+6JcTdZh+JJjFEPgDJsQp7ySnEhtO5gM7pI0XOoATP9Ex/IuirHvCSXvbNXua6QAZjbfRqKCbAoLLIvBlsZJZ0lKH8NIOapuUFB1rvHePoMPvmZWKMBUO6UovNA0URmZPDP0Dg5QDiHZ2jaKfdYH61XISwx3yJm7/3mRKSRvThoPxsnWrAur4OMMm2fmMCmU648ZIAoxzJxhnZaZ0gDZ44UVBDE31O8vchWdFZbEP3LN7mLvy3VXRVSylVTWDx7xtjXv3goot9rD0LdePnNbH6YPQVr/IX62362D427TzrQ7fcXR8S3nQpXd dude@dev
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDx7gGjmazqjK7+Fv2JTR3zhSX5vt6DxbHZ8TClxPderB3CRb6slxDimGqpDFDc+BBgQqRfD2zISn+m19/gGZUXdgs+7/3Ng+ww/BMBESjEr4DVuZ97gAaal2uFqHXnFMBGpm+lQhWWUs6EdBo3igkXUsl7Lkhd9Hbqtj2Ba0BKqGAZh77AcTWnlzGT6wfr48q0TVjoEk/Dtjluyg1JXIPOXjB+BjBBU/wSyF6LlaIovl6Hqidu5VUC9iDCLbhXyAj6jvOdldixQ3KwNA2MiIm2le3jWrqOwmYD3qQ9RGSg/ccZ3ZZfNBwdkG2RvUNHXwD9QQMB8MhKAMzfLx0SvdfB dude@X8DAi
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC/VxPB/AgZcYtoOwYlUOdpj+PYJpoLogV+aw6Wcwmhliu+8HPO39npke03ClfQdIdNLOpEXQq1Gi3BMqKKV6u62P/9cghk1sRUtdb6N/xfv3YEPG2UKn8LlsCtUsh6SVw7ie1tl8K+tJu8NsGx6O/lILSlAGrujHXKS6/2Kqb2LrDs+x42OC/sTzcVZOA9WmaS/U6WVWtO0sIOjKjeKYnhEwfP+W7Yg71LoC+PwOirhsgaRXKo0qGpoqmCXY/MWdxhEXe5ntd4am4RMIjejWpjX+DdcitN77DIYNwMuQwC6e2QX/Hual1TYw/T9XpF2lJSY2wfVMicwkfE+eH56m4b dude@dev
+manage_etc_hosts: localhost
+package_upgrade: true
+power_state:
+  delay: "+1"
+  mode: reboot
+  message: Bye Bye
+  timeout: 1 
+  condition: True
+timezone: Canada/Eastern
+runcmd:
+  - apt autoremove
+
+
+
+
+
+for i in user-data meta-data network-config; do
+  if [ -f ${i} ]; 
+    then rm ${i};
+  fi
+  cp bak/${i}.bak ${i};
+done;
+printf "apt_sources:\n  - source: \"ppa:longsleep/golang-backports\"\npackages:\n  - golang-go\n  - libnl-3-dev\n  - libnl-genl-3-dev\n  - protobuf-compiler\nwrite_files:\n  -  encoding: b64\n     content: aXBfdnM=\n     path: /etc/modules-load.d/ip_vs.conf\n  -  encoding: b64\n     content: bmZfY29ubnRyYWNrX2lwdjQ=\n     path: /etc/modules-load.d/nf_conntrack_ipv4.conf\n  -  encoding: b64\n     content: ZHVtbXk=\n     path: /etc/modules-load.d/dummy.conf\n  -  encoding: b64\n     content: b3B0aW9ucyBkdW1teSBudW1kdW1taWVzPTE=\n     path: /etc/modprobe.d/dummy.conf\n" >> user-data
+printf "  ens4:\n    dhcp4: false\n    dhcp6: false\n    optional: true\n" >> network-config
+for i in 1 2; do
+  sed -i "s?controller?seesaw-${i}?" user-data
+  sed -i -e "s?instance00?seesaw${i}?" -e "s?initial?seesaw-${i}?" meta-data
+  sed -i -e "s?.60?.7${i}?" -e "s?host?seesaw-${i}?" network-config
+  genisoimage  -output /vm/tmp/iso/seesaw-${i}.iso -volid cidata -joliet -rock user-data meta-data network-config
+  qemu-img create -f qcow2 -b  /vm/tmp/backingImage/xenial-server-cloudimg-amd64-disk1.img /vm/tmp/images/seesaw-${i}.img 40G
+  rm user-data meta-data network-config
+  for j in user-data meta-data network-config; do
+    cp bak/${j}.bak ${j};
+  done;
+  printf "apt_sources:\n  - source: \"ppa:longsleep/golang-backports\"\npackages:\n  - golang-go\n  - libnl-3-dev\n  - libnl-genl-3-dev\n  - protobuf-compiler\nwrite_files:\n  -  encoding: b64\n     content: aXBfdnM=\n     path: /etc/modules-load.d/ip_vs.conf\n  -  encoding: b64\n     content: bmZfY29ubnRyYWNrX2lwdjQ=\n     path: /etc/modules-load.d/nf_conntrack_ipv4.conf\n  -  encoding: b64\n     content: ZHVtbXk=\n     path: /etc/modules-load.d/dummy.conf\n  -  encoding: b64\n     content: b3B0aW9ucyBkdW1teSBudW1kdW1taWVzPTE=\n     path: /etc/modprobe.d/dummy.conf\n" >> user-data
+  printf "  ens4:\n    dhcp4: false\n    dhcp6: false\n    optional: true\n" >> network-config
+done
+
+## Compute Instances
+for i in 1 2; do
+  virt-install --name seesaw-${i} \
+    --ram=2048 --vcpus=1 --cpu host --hvm \
+    --disk path=/vm/tmp/images/seesaw-${i}.img \
+    --import --disk path=/vm/tmp/iso/seesaw-${i}.iso,device=cdrom \
+    --network bridge=enp7,model=virtio,virtualport_type=openvswitch \
+    --network bridge=enp7,model=virtio,virtualport_type=openvswitch \
+    --noautoconsole &
+done
+
 
 ## [Get Latest version of Keepalived](http://www.keepalived.org/download.html)
 ```
