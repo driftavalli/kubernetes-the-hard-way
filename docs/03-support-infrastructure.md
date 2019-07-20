@@ -222,3 +222,6 @@ sudo semodule -i MySQL_galera.pp
 # sudo setenforce 1
 sudo systemctl restart mariadb
 sudo systemctl status mariadb
+
+
+Next: [Compute Resources](04-compute-resources.md)
