@@ -16,8 +16,8 @@ Kubernetes The Hard Way guides you through bootstrapping a highly available Kube
 This tutorial attempts to create as much of the supporting infrastructure as possible. This means it uses more than the six (6) VM used by the original tutorial. It also assumes you have access to an Linux machine running KVM with sufficient resources. This usually means you have enough RAM as most CPU should be able to handle the load, (I have run this on a Thinkpad t450 with RAM upgraded to 32GB), reducing the memory assigned to the VMs should enable it to run on less resources but the Kubernetes cluster won't really support the deployment of applications. 
 
 * [Prerequisites](docs/01-prerequisites.md)
-* [Support Infrastructure](docs/02-support-infrastructure.md)
-* [Installing the Client Tools](docs/04-client-tools.md)
+* [Installing the Client Tools](docs/02-client-tools.md)
+* [Support Infrastructure](docs/03-support-infrastructure.md)
 * [Provisioning Compute Resources](docs/04-compute-resources.md)
 * [Provisioning the CA and Generating TLS Certificates](docs/05-certificate-authority.md)
 * [Generating Kubernetes Configuration Files for Authentication](docs/06-kubernetes-configuration-files.md)
