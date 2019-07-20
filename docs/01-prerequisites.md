@@ -4,7 +4,7 @@
 
 This leverages KVM to run the VMs. Keepalived, PowerDNS (all open source and free applications) will be used to implement nameservers and loadbalancers to replicate KTHW on a single box, using it as a learning tool.
 
-Estimated cost: Free (If you have an appropriate machine)
+Estimated cost: Free
 
 ## Required tools
 The intent is to replicate KTHW as closely as possible; to this end, keepalived is used to provide loadbalancing across the controller hosts and PowerDNS is used to provide name resolution for the IP address. In total, we will setup 5 extra VMs for the loadbalancer and DNS server.
@@ -16,35 +16,30 @@ These are the tools used to create the VM's on the KVM host. I have added the li
 * virsh
 
 ### Install tools
-  #### [bridge-utils](https://wiki.linuxfoundation.org/networking/bridge)
-  Bridge administration utilities that can be used to create and manage bridges (switches):
+[bridge-utils](https://wiki.linuxfoundation.org/networking/bridge): Bridge administration utilities that can be used to create and manage bridges (switches).
   
     
     sudo apt install bridge-utils
     
     
-  #### [genisoimage](https://wiki.debian.org/genisoimage)
-  CLI for creating ISO images:
+  [genisoimage](https://wiki.debian.org/genisoimage): CLI for creating ISO images.
   
     
     sudo apt install genisoimage
     
     
-  #### [qemu-utils](https://packages.debian.org/sid/qemu-utils)
-  QEMU administration utility that includes a disk image creator:
+  [qemu-utils](https://packages.debian.org/sid/qemu-utils): QEMU administration utility that includes a disk image creator.
   
     
     sudo apt install qemu-utils
     
     
-  #### [virt-install](https://packages.debian.org/sid/virtinst)
-  CLI that can be used to create VMs using libvirt:
+  [virt-install](https://packages.debian.org/sid/virtinst): CLI that can be used to create VMs using libvirt.
   
     
     sudo apt install virtinst
   
-  #### [virsh](https://linux.die.net/man/1/virsh)
-  virsh is the main interface for managing virsh guest domains
+  [virsh](https://linux.die.net/man/1/virsh): virsh is the main interface for managing virsh guest domains.
   
   
     sudo apt install libvirt-clients

@@ -1,3 +1,108 @@
+# Infrastructure setup
+## Install KVM
+We'll be using KVM as the hypervisor. Installation of KVM won't be covered here as there are lots of good articles that describe how to do that. Check [KVM Installation](https://help.ubuntu.com/community/KVM/Installation) for how to get started.
+
+## Create bridge
+We will configure our nic to act as a bridge to which we will connect the VMs to. This allows the possibility of running multiple clusters on the same machine. The config below is how the server has been setup however the network configuration to enable this is out of scope and won't be covered here. 
+
+```
+cat <<EOF | sudo tee /etc/netplan/01-netcfg.yaml
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp3s0:
+      dhcp4: no
+      optional: true
+  bridges:
+    br0:
+      dhcp4: no
+      optional: true
+      addresses: [ 10.240.80.254/24 ]
+      gateway4: 10.240.80.1
+      nameservers:
+        search: [ homelab.test ]
+        addresses: [ 1.1.1.1, 9.9.9.9 ]
+        interfaces:
+            - enp3s0
+```
+Then to activate the configuration, run
+
+`sudo netplan generate`
+
+`sudo netplan apply`
+
+If everything is setup correctly, you should have a bridge assigned with a static IP.
+## Create Base Image for installation of [Keepalived](http://www.keepalived.org)
+* We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/).
+
+    `wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img`
+
+* Install the VM
+
+Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version
+
+## [Get Latest version of Keepalived](http://www.keepalived.org/download.html)
+```
+curl --progress http://keepalived.org/software/keepalived-1.2.15.tar.gz | tar xz
+cd keepalived-1.2.15
+./configure --prefix=/usr/local/keepalived-1.2.15
+make
+sudo make install
+ln -s /usr/local/keepalived-1.2.15 /usr/local/keepalived
+vim ~/.profile
+export PATH=$PATH:/usr/local/keepalived/sbin
+```
+Add the following line to sysctl.conf (`sudo vim /etc/sysctl.conf`)
+
+`net.ipv4.ip_forward = 1`
+
+This enables ip forwarding on the VM. See []() for other options
+
+### Create systemd service file
+```
+cat <<EOF | sudo tee /etc/systemd/system/keepalived.service
+[Unit]
+Description=Keepalive Daemon (LVS and VRRP)
+After=syslog.target network-online.target
+Wants=network-online.target
+# Only start if there is a configuration file
+ConditionFileNotEmpty=/etc/keepalived/keepalived.conf
+
+[Service]
+Type=forking
+KillMode=process
+# Read configuration variable file if it is present
+EnvironmentFile=-/etc/default/keepalived
+ExecStart=/usr/sbin/keepalived $DAEMON_ARGS
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+```
+sudo systemctl daemon-reload
+sudo systemctl enable keepalived
+sudo systemctl start keepalived
+```
+
+## Reset Cloud-Init
+sudo cloud-init clean
+sudo shutdown -h now
+virt-sysprep -a keepalived.img
+
+## Configure Keepalived
+### LB-1
+sudo scp dude@10.240.10.254:/vm/tmp/bak/keepalived.1 /etc/keepalived/keepalived.conf
+
+### LB-2
+sudo scp dude@10.240.10.254:/vm/tmp/bak/keepalived.2 /etc/keepalived/keepalived.conf
+
+sudo vim /etc/keepalived/keepalived.conf
+sudo systemctl restart keepalived
+
 ## Create repositories
 sudo -s
 vi /etc/yum.repos.d/MariaDB.repo
