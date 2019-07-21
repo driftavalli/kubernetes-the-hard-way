@@ -45,7 +45,7 @@ We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build
 #### Create `user-data`, `meta-data` and `network-config` files.
 Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version from the [keepalived]() website. Create password hash using `mkpasswd --method=SHA-512 --rounds=4096`, requires installing `whois`: `sudo apt install whois`. Replace italicized bold variables with your own.
 
-```
+<pre>
 cat <<EOF | tee user-data
 #cloud-config
 users:
@@ -58,9 +58,7 @@ users:
     
     passwd: $6$rounds=4096$tDcdPTt8I0DEpK$VzPyIiScAcUTQ.aPIepj2oPlr3yIB9xVRnDsdom//bOjuhw68X0wfh/6g8dpz3yuyyBiacRMfq5oVdnmKOrFX.
     ssh-authorized-keys:
-      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDn442Z+YMoKHkt7T56cA1tb2yZBO8h+6JcTdZh+JJjFEPgDJsQp7ySnEhtO5gM7pI0XOoATP9Ex/IuirHvCSXvbNXua6QAZjbfRqKCbAoLLIvBlsZJZ0lKH8NIOapuUFB1rvHePoMPvmZWKMBUO6UovNA0URmZPDP0Dg5QDiHZ2jaKfdYH61XISwx3yJm7/3mRKSRvThoPxsnWrAur4OMMm2fmMCmU648ZIAoxzJxhnZaZ0gDZ44UVBDE31O8vchWdFZbEP3LN7mLvy3VXRVSylVTWDx7xtjXv3goot9rD0LdePnNbH6YPQVr/IX62362D427TzrQ7fcXR8S3nQpXd dude@dev
-      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDx7gGjmazqjK7+Fv2JTR3zhSX5vt6DxbHZ8TClxPderB3CRb6slxDimGqpDFDc+BBgQqRfD2zISn+m19/gGZUXdgs+7/3Ng+ww/BMBESjEr4DVuZ97gAaal2uFqHXnFMBGpm+lQhWWUs6EdBo3igkXUsl7Lkhd9Hbqtj2Ba0BKqGAZh77AcTWnlzGT6wfr48q0TVjoEk/Dtjluyg1JXIPOXjB+BjBBU/wSyF6LlaIovl6Hqidu5VUC9iDCLbhXyAj6jvOdldixQ3KwNA2MiIm2le3jWrqOwmYD3qQ9RGSg/ccZ3ZZfNBwdkG2RvUNHXwD9QQMB8MhKAMzfLx0SvdfB dude@X8DAi
-      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC/VxPB/AgZcYtoOwYlUOdpj+PYJpoLogV+aw6Wcwmhliu+8HPO39npke03ClfQdIdNLOpEXQq1Gi3BMqKKV6u62P/9cghk1sRUtdb6N/xfv3YEPG2UKn8LlsCtUsh6SVw7ie1tl8K+tJu8NsGx6O/lILSlAGrujHXKS6/2Kqb2LrDs+x42OC/sTzcVZOA9WmaS/U6WVWtO0sIOjKjeKYnhEwfP+W7Yg71LoC+PwOirhsgaRXKo0qGpoqmCXY/MWdxhEXe5ntd4am4RMIjejWpjX+DdcitN77DIYNwMuQwC6e2QX/Hual1TYw/T9XpF2lJSY2wfVMicwkfE+eH56m4b dude@dev
+      - ssh-rsa 
 manage_etc_hosts: localhost
 package_upgrade: true
 power_state:
@@ -72,7 +70,8 @@ power_state:
 timezone: Canada/Eastern
 runcmd:
   - apt autoremove
-
+EOF
+</pre>
 
 
 
