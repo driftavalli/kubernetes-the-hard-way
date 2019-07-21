@@ -36,29 +36,43 @@ Then to activate the configuration, run
 If everything is setup correctly, you should have a bridge assigned with a static IP.
 
 ## Create Base Image for installation of [Keepalived](http://www.keepalived.org)
-We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. A lot of the heavy lifting for setting up the server will also be done using [cloud-init]() which the cloud images support. While not particularly suited for configuration management, we will use it here for now (more suitable options for configuration management for servers include [ansible](https://www.ansible.com/), [chef](https://www.chef.io/), [puppet](https://puppet.com/). Eventually, we will probably replace the setup with [terraform](https://www.terraform.io/) which should make setting up the servers a breeze. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/).
+We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. A lot of the heavy lifting for setting up the server will also be done using [cloud-init]() which the cloud images support. While not particularly suited for configuration management, we will use it here for now (more suitable options for configuration management for servers include [ansible](https://www.ansible.com/), [chef](https://www.chef.io/), [puppet](https://puppet.com/). Eventually, we will probably replace the setup with [terraform](https://www.terraform.io/) which should make setting up the servers a breeze. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/). I prefer having a folder structure I can easily delete when I am all done. So I will be creating a playground folder and all the files downloaded and created will be stored in that folder.
 
-    `wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img`
+`mkdir -p ~/tmp/backup ~/tmp/downloads ~/tmp/backingImages ~/tmp/iso ~/tmp/images ~/tmp/sshkeys/`
 
-### Install the VM
+`cd ~/tmp/downloads`
 
-#### Create `user-data`, `meta-data` and `network-config` files.
+`wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img`
+
+`cp bionic-server-cloudimg-amd64.img /home/tmp/backingImages/keepalived.img`
+
+### Install Base Image VM in KVM
+#### First Create `user-data`, `meta-data` and `network-config` files.
 Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version from the [keepalived]() website. Create password hash using `mkpasswd --method=SHA-512 --rounds=4096`, requires installing `whois`: `sudo apt install whois`. Replace italicized bold variables with your own.
 
-<pre>
-cat <<EOF | tee user-data
+`cd ~/tmp/sshkeys/`
+
+`ssh-keygen -t rsa -b 4096 -C "kthw@homelab.test"`
+
+At the prompt, enter path to sshkeys directory: /home/$USER/tmp/sshkeys/id_kthw. You should then find two files, `id_kthw` and `id_kthw.pub`. We will use the .pub later on.
+
+`mkpasswd --method=SHA-512 --rounds=4096 > passwd.hash`
+
+`cd ~/home/backup/` _Remember to replace USERNAME, PASSWORD_HASh_
+
+<pre><code>
+cat &lt;&lt;EOF | tee ~/tmp/backup/user-data.backup
 #cloud-config
 users:
-  - name: *`USERNAME`*
-    gecos: USERNAME
+  - name: <b>USERNAME</b>
+    gecos: <b>USERNAME</b>
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     shell: /bin/bash
     groups: sudo
     lock_passwd: false
-    
-    passwd: $6$rounds=4096$tDcdPTt8I0DEpK$VzPyIiScAcUTQ.aPIepj2oPlr3yIB9xVRnDsdom//bOjuhw68X0wfh/6g8dpz3yuyyBiacRMfq5oVdnmKOrFX.
+    passwd: <b>PASSWORD_HASH</b>
     ssh-authorized-keys:
-      - ssh-rsa 
+      - <b>SSH_KEYS</b>
 manage_etc_hosts: localhost
 package_upgrade: true
 power_state:
@@ -68,66 +82,75 @@ power_state:
   timeout: 1 
   condition: True
 timezone: Canada/Eastern
-runcmd:
-  - apt autoremove
 EOF
-</pre>
+</code></pre>
 
+meta-data
+<pre><code>
+cat &lt;&lt;EOF | tee ~/tmp/backup/meta-data.backup
+instance-id: iid-instance00
+local-hostname: keepalived
+EOF
+</code></pre>
 
+network-config
+<pre><code>
+cat &lt;&lt;EOF | tee ~/tmp/backup/network-config.backup
+version: 2
+ethernets:
+  ens3:
+    dhcp4: false
+    dhcp6: false
+    addresses:
+      - 10.240.70.70/24
+    optional: true
+    gateway4: 10.240.80.1
+    nameservers:
+      search:
+        - homelab.test
+      addresses:
+        - 10.240.70.81
+EOF        
+</code></pre>
 
-
-for i in user-data meta-data network-config; do
-  if [ -f ${i} ]; 
-    then rm ${i};
-  fi
-  cp bak/${i}.bak ${i};
-done;
-printf "apt_sources:\n  - source: \"ppa:longsleep/golang-backports\"\npackages:\n  - golang-go\n  - libnl-3-dev\n  - libnl-genl-3-dev\n  - protobuf-compiler\nwrite_files:\n  -  encoding: b64\n     content: aXBfdnM=\n     path: /etc/modules-load.d/ip_vs.conf\n  -  encoding: b64\n     content: bmZfY29ubnRyYWNrX2lwdjQ=\n     path: /etc/modules-load.d/nf_conntrack_ipv4.conf\n  -  encoding: b64\n     content: ZHVtbXk=\n     path: /etc/modules-load.d/dummy.conf\n  -  encoding: b64\n     content: b3B0aW9ucyBkdW1teSBudW1kdW1taWVzPTE=\n     path: /etc/modprobe.d/dummy.conf\n" >> user-data
-printf "  ens4:\n    dhcp4: false\n    dhcp6: false\n    optional: true\n" >> network-config
-for i in 1 2; do
-  sed -i "s?controller?seesaw-${i}?" user-data
-  sed -i -e "s?instance00?seesaw${i}?" -e "s?initial?seesaw-${i}?" meta-data
-  sed -i -e "s?.60?.7${i}?" -e "s?host?seesaw-${i}?" network-config
-  genisoimage  -output /vm/tmp/iso/seesaw-${i}.iso -volid cidata -joliet -rock user-data meta-data network-config
-  qemu-img create -f qcow2 -b  /vm/tmp/backingImage/xenial-server-cloudimg-amd64-disk1.img /vm/tmp/images/seesaw-${i}.img 40G
-  rm user-data meta-data network-config
-  for j in user-data meta-data network-config; do
-    cp bak/${j}.bak ${j};
-  done;
-  printf "apt_sources:\n  - source: \"ppa:longsleep/golang-backports\"\npackages:\n  - golang-go\n  - libnl-3-dev\n  - libnl-genl-3-dev\n  - protobuf-compiler\nwrite_files:\n  -  encoding: b64\n     content: aXBfdnM=\n     path: /etc/modules-load.d/ip_vs.conf\n  -  encoding: b64\n     content: bmZfY29ubnRyYWNrX2lwdjQ=\n     path: /etc/modules-load.d/nf_conntrack_ipv4.conf\n  -  encoding: b64\n     content: ZHVtbXk=\n     path: /etc/modules-load.d/dummy.conf\n  -  encoding: b64\n     content: b3B0aW9ucyBkdW1teSBudW1kdW1taWVzPTE=\n     path: /etc/modprobe.d/dummy.conf\n" >> user-data
-  printf "  ens4:\n    dhcp4: false\n    dhcp6: false\n    optional: true\n" >> network-config
-done
-
-## Compute Instances
-for i in 1 2; do
-  virt-install --name seesaw-${i} \
-    --ram=2048 --vcpus=1 --cpu host --hvm \
-    --disk path=/vm/tmp/images/seesaw-${i}.img \
-    --import --disk path=/vm/tmp/iso/seesaw-${i}.iso,device=cdrom \
-    --network bridge=enp7,model=virtio,virtualport_type=openvswitch \
-    --network bridge=enp7,model=virtio,virtualport_type=openvswitch \
-    --noautoconsole &
-done
-
-
-## [Get Latest version of Keepalived](http://www.keepalived.org/download.html)
+### Create ISO
 ```
-curl --progress http://keepalived.org/software/keepalived-1.2.15.tar.gz | tar xz
-cd keepalived-1.2.15
-./configure --prefix=/usr/local/keepalived-1.2.15
-make
-sudo make install
-ln -s /usr/local/keepalived-1.2.15 /usr/local/keepalived
-vim ~/.profile
-export PATH=$PATH:/usr/local/keepalived/sbin
+cd ~/tmp/
 ```
-Add the following line to sysctl.conf (`sudo vim /etc/sysctl.conf`)
 
-`net.ipv4.ip_forward = 1`
+```
+for i in user-data network-config meta-data; do
+  cp /home/$USER/tmp/backup/$i.backup $i
+done
+```
 
-This enables ip forwarding on the VM. See []() for other options
+We will add some configuration to download and install keepalived to user-data
+```
+printf "runcmd:\n  - apt autoremove\n  - curl --progress https://keepalived.org/software/keepalived-2.0.17.tar.gz | tar xz -C\n  - cd keepalived-2.0.17\n  - ./configure --prefix=/usr/local/keepalived-2.0.17\n  - make\n  - sudo make install\n  - ln -s /usr/local/keepalived-2.0.17 /usr/local/keepalived\n  - echo \"net.ipv4.ip_forward=1\" >> /etc/sysctl.conf\n" >> user-data
 
-### Create systemd service file
+```
+
+```
+genisoimage  -output /home/$USER/tmp/iso/keepalived.iso -volid cidata -joliet -rock user-data meta-data network-config
+```
+
+### Create Keepalived VM Compute Instance
+```
+cd ~/tmp/
+```
+
+<pre><code>
+virt-install --name keepalived \
+  --ram=512 --vcpus=1 --cpu host --hvm \
+  --disk path=/home/$USER/tmp/backingImages/keepalived.img \
+  --import --disk path=/home/$USER/tmp/iso/keepalived.iso,device=cdrom \
+  --network bridge=br0,model=virtio,virtualport_type=openvswitch \
+  --noautoconsole --os-variant=ubuntu18.04
+</code></pre>
+
+#### Log into the VM and create systemd service file
+`virsh console keepalived`
+
 ```
 cat <<EOF | sudo tee /etc/systemd/system/keepalived.service
 [Unit]
@@ -150,28 +173,271 @@ WantedBy=multi-user.target
 EOF
 ```
 
+#### Reset Cloud-Init
+sudo cloud-init clean
+sudo shutdown -h now
+
+#### Remove VM from libvirt
+`virsh undefine keepalived`
+
+`rm keepalived.iso`
+
+
+We now have a base image for keepalived we can use over and over. We will write the script below to auto create two vms: keepalived-1 and keepalived-2.
+
+<pre><code>
+cat &lt;&lt;EOF | tee keepalived.sh
+#!/bin/bash
+## Remove any old configuration files for cloud-init
+for i in user-data meta-data network-config; do
+  if [ -f ${i} ]; 
+    then rm ${i};
+  fi
+  cp backup/${i}.backup ${i};
+done;
+for i in 1 2; do
+  sed -i -e "s?keepalived?keepalived-${i}?" -e "s?iid-instance00?iid-keepalived${i}?" meta-data
+  sed -i -e "s?.70?.7${i}?" network-config
+  genisoimage  -output /home/$USER/tmp/iso/keepalived-${i}.iso -volid cidata -joliet -rock user-data meta-data network-config
+  qemu-img create -f qcow2 -o backing_file=/home/$USER/tmp/backingImage/keepalived.img /home/$USER/tmp/images/keepalived-${i}.img 40G
+  rm user-data meta-data network-config
+  for j in user-data meta-data network-config; do
+    cp bak/${j}.backup ${j};
+  done;
+done
+
+## Create Compute Instances
+for i in 1 2; do
+  virt-install --name keepalived-${i} \
+    --ram=512 --vcpus=1 --cpu host --hvm \
+    --disk path=/home/$USER/tmp/images/keepalived-${i}.img \
+    --import --disk path=/home/$USER/tmp/iso/keepalived-${i}.iso,device=cdrom \
+    --network bridge=br0,model=virtio,virtualport_type=openvswitch \
+    --noautoconsole --os-variant=ubuntu18.04
+done
+</code></pre>
+
+### Configure Keepalived
+#### LB-1
+<pre><code>
+cat &lt;&lt;EOF | sudo tee /etc/keepalived/keepalived.conf
+! Configuration File for keepalived
+
+global_defs {
+  notification_email {
+    keepalived@homelab.test
+  }
+  notification_email_from keepalived-1@homelab.test
+! UNIQUE:
+  router_id KEEPALIVED_1
+}
+
+! ***********************************************************************
+! *************************   WEB SERVICES VIP  *************************
+! ***********************************************************************
+vrrp_instance VirtIP_10 {
+  state MASTER
+  interface ens3
+  virtual_router_id 10
+
+! UNIQUE:
+  priority 150
+  advert_int 3
+  smtp_alert
+  authentication {
+      auth_type PASS
+      auth_pass homelab
+  }
+
+  use_mac
+
+  virtual_ipaddress {
+      10.240.80.100
+  }
+}
+
+! ************************   WEB SERVERS  **************************
+
+virtual_server 10.240.80.100 6443 {
+  delay_loop 10
+  lb_algo wrr
+  lb_kind DR
+  persistence_timeout 5
+  protocol TCP
+
+  real_server 10.240.80.10 6443 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+  }
+
+  real_server 10.240.80.11 6443 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+  }
+
+  real_server 10.240.80.12 6443 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+    }
+}
+
+virtual_server 10.240.80.100 80 {
+  delay_loop 10
+  lb_algo wrr
+  lb_kind DR
+  persistence_timeout 5
+  protocol TCP
+
+  real_server 10.240.80.10 80 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+  }
+
+  real_server 10.240.80.11 80 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+  }
+
+  real_server 10.240.80.12 80 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+    }
+}
+
+</code></pre>
+
+#### LB-2
+<pre><code>
+cat &lt;&lt;EOF | sudo tee /etc/keepalived/keepalived.conf
+! Configuration File for keepalived
+
+global_defs {
+  notification_email {
+    keepalived@homelab.test
+  }
+  notification_email_from keepalived-2@homelab.test
+! UNIQUE:
+  router_id KEEPALIVED_2
+}
+
+! ***********************************************************************
+! *************************   WEB SERVICES VIP  *************************
+! ***********************************************************************
+
+vrrp_instance VirtIP_10 {
+  state BACKUP
+  interface ens3
+  virtual_router_id 10
+  
+! UNIQUE:
+  priority 50
+  advert_int 3
+  smtp_alert
+  authentication {
+    auth_type PASS
+    auth_pass homelab 
+  }
+
+  use_vmac
+
+  virtual_ipaddress {
+    10.240.80.100
+  }
+}
+
+! ************************   WEB SERVERS  **************************
+
+virtual_server 10.240.80.100 6443 {
+  delay_loop 10
+  lb_algo wrr
+  lb_kind DR
+  persistence_timeout 5
+  protocol TCP
+
+  real_server 10.240.80.10 6443 {
+    weight 1
+    TCP_CHECK {
+      connect_timeout 3
+    }
+  }
+
+  real_server 10.240.80.11 6443 {
+    weight 1
+    TCP_CHECK {
+      connect_timeout 3
+    }
+  }
+
+  real_server 10.240.80.12 6443 {
+    weight 1
+    TCP_CHECK {
+      connect_timeout 3
+    }
+  }
+}
+
+virtual_server 10.240.80.100 80 {
+  delay_loop 10
+  lb_algo wrr
+  lb_kind DR
+  persistence_timeout 5
+  protocol TCP
+
+  real_server 10.240.80.10 80 {
+    weight 1
+    TCP_CHECK {
+      connect_timeout 3
+    }
+  }
+
+  real_server 10.240.80.11 80 {
+    weight 1
+    TCP_CHECK {
+      connect_timeout 3
+    }
+  }
+
+  real_server 10.240.80.12 80 {
+    weight 1
+    TCP_CHECK {
+      connect_timeout 3
+    }
+  }
+}
+</code></pre>
+
+#### 
+Reload systemd and start service
+
 ```
 sudo systemctl daemon-reload
 sudo systemctl enable keepalived
 sudo systemctl start keepalived
+systemctl status keepalived
 ```
 
-## Reset Cloud-Init
-sudo cloud-init clean
-sudo shutdown -h now
-virt-sysprep -a keepalived.img
+## Create Image for Nameserver using PowerDNS
+We will be using [CentOS cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. A lot of the heavy lifting for setting up the server will also be done using [cloud-init]() which the cloud images support. While not particularly suited for configuration management, we will use it here for now (more suitable options for configuration management for servers include [ansible](https://www.ansible.com/), [chef](https://www.chef.io/), [puppet](https://puppet.com/). Eventually, we will probably replace the setup with [terraform](https://www.terraform.io/) which should make setting up the servers a breeze. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/). I prefer having a folder structure I can easily delete when I am all done. So I will be creating a playground folder and all the files downloaded and created will be stored in that folder.
 
-## Configure Keepalived
-### LB-1
-sudo scp dude@10.240.10.254:/vm/tmp/bak/keepalived.1 /etc/keepalived/keepalived.conf
+`cd ~/tmp/downloads`
 
-### LB-2
-sudo scp dude@10.240.10.254:/vm/tmp/bak/keepalived.2 /etc/keepalived/keepalived.conf
+`wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img`
 
-sudo vim /etc/keepalived/keepalived.conf
-sudo systemctl restart keepalived
+`cp bionic-server-cloudimg-amd64.img /home/tmp/backingImages/keepalived.img`
 
-## Create repositories
+### Add repositories
 sudo -s
 vi /etc/yum.repos.d/MariaDB.repo
 
