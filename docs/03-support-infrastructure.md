@@ -174,8 +174,9 @@ EOF
 ```
 
 #### Reset Cloud-Init
-sudo cloud-init clean
-sudo shutdown -h now
+`sudo cloud-init clean`
+
+`sudo shutdown -h now`
 
 #### Remove VM from libvirt
 `virsh undefine keepalived`
