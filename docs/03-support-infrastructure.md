@@ -3,7 +3,7 @@
 We'll be using KVM as the hypervisor. Installation of KVM won't be covered here as there are lots of good articles that describe how to do that. Check [KVM Installation](https://help.ubuntu.com/community/KVM/Installation) for how to get started.
 
 ## Create bridge
-We will configure our nic to act as a bridge to which we will connect the VMs to. This allows the possibility of running multiple clusters on the same machine. The config below uses [netplan](https://netplan.io) to setup the bridge on the system, however the network configuration to enable this is out of scope and won't be covered here. 
+We will configure our NIC to act as a bridge to which we will connect the VMs to. This allows the possibility of running multiple clusters on the same machine. The config below uses [netplan](https://netplan.io) to setup the bridge on the system, however the network configuration to enable this is out of scope and won't be covered here. 
 
 ```
 cat <<EOF | sudo tee /etc/netplan/01-netcfg.yaml
@@ -48,7 +48,7 @@ We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build
 
 ### Install Base Image VM in KVM
 #### First Create `user-data`, `meta-data` and `network-config` files.
-Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version from the [keepalived]() website. Create password hash using `mkpasswd --method=SHA-512 --rounds=4096`, requires installing `whois`: `sudo apt install whois`. Replace italicized bold variables with your own.
+Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version from the [keepalived](https://www.keepalived.org/software/keepalived-2.0.17.tar.gz) website. Create password hash using `mkpasswd --method=SHA-512 --rounds=4096`, requires installing `whois`: `sudo apt install whois`. Replace italicized bold variables with your own.
 
 `cd ~/tmp/sshkeys/`
 
