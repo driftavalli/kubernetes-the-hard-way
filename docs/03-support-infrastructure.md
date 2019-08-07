@@ -36,7 +36,7 @@ Then to activate the configuration, run
 If everything is setup correctly, you should have a bridge assigned with a static IP.
 
 ## Create Base Image for installation of [Keepalived](http://www.keepalived.org)
-We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. A lot of the heavy lifting for setting up the server will also be done using [cloud-init]() which the cloud images support. While not particularly suited for configuration management, we will use it here for now (more suitable options for configuration management for servers include [ansible](https://www.ansible.com/), [chef](https://www.chef.io/), [puppet](https://puppet.com/). Eventually, we will probably replace the setup with [terraform](https://www.terraform.io/) which should make setting up the servers a breeze. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/). I prefer having a folder structure I can easily delete when I am all done. So I will be creating a playground folder and all the files downloaded and created will be stored in that folder.
+We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. A lot of the heavy lifting for setting up the server will also be done using [cloud-init](https://cloud-init.io/) which the cloud images support. While not particularly suited for configuration management, we will use it here for now (more suitable options for configuration management for servers include [ansible](https://www.ansible.com/), [chef](https://www.chef.io/), [puppet](https://puppet.com/). Eventually, we will probably replace the setup with [terraform](https://www.terraform.io/) which should make setting up the servers a breeze. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/). I prefer having a folder structure I can easily delete when I am all done. So I will be creating a playground folder and all the files downloaded and created will be stored in that folder.
 
 `mkdir -p ~/tmp/backup ~/tmp/downloads ~/tmp/backingImages ~/tmp/iso ~/tmp/images ~/tmp/sshkeys/`
 
@@ -430,20 +430,58 @@ systemctl status keepalived
 ```
 
 ## Create Image for Nameserver using PowerDNS
-We will be using [CentOS cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. A lot of the heavy lifting for setting up the server will also be done using [cloud-init]() which the cloud images support. While not particularly suited for configuration management, we will use it here for now (more suitable options for configuration management for servers include [ansible](https://www.ansible.com/), [chef](https://www.chef.io/), [puppet](https://puppet.com/). Eventually, we will probably replace the setup with [terraform](https://www.terraform.io/) which should make setting up the servers a breeze. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/). I prefer having a folder structure I can easily delete when I am all done. So I will be creating a playground folder and all the files downloaded and created will be stored in that folder.
+We will be using [CentOS cloud images](https://cloud-images.ubuntu.com) to build a base image for PowerDNS. Similar to the base image for Keepalived, we will do a lot of the preparation by using [cloud-init](https://cloud-init.io/). We will also leverage the CentOS [cloud images](https://cloud.centos.org/centos/7/images/).
 
 `cd ~/tmp/downloads`
 
-`wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img`
+`wget https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2`
 
-`cp bionic-server-cloudimg-amd64.img /home/tmp/backingImages/keepalived.img`
+`cp CentOS-7-x86_64-GenericCloud.qcow2 /home/tmp/backingImages/powerdns.qcow2`
 
+### Install VM
+#### Configure PowerDNS VMs
+<pre><code>
+for i in user-data meta-data network-config; do
+  if [ -f ${i} ]; 
+    then rm ${i};
+  fi
+  cp bak/${i}.cnt ${i};
+done;
+
+for i in 1 2 3; do
+  
+  sed -i "s?controller?powerdns-${i}?" user-data
+  sed -i -e "s?instance00?powerdns-${i}?" -e "s?initial?powerdns-${i}?" meta-data
+  sed -i -e "s?.60?.8${i}?" network-config
+  
+  genisoimage  -output /vm/tmp/iso/powerdns-${i}.iso -volid cidata -joliet -rock user-data meta-data network-config
+  qemu-img create -f qcow2 -o backing_file=/vm/tmp/backingImage/CentOS-7-base.qcow2 /vm/tmp/images/powerdns-${i}.img 40G
+  qemu-img create -f qcow2 /vm/tmp/images/powerdns-hd2-${i}.img 5G
+  
+  rm user-data meta-data network-config
+  for j in user-data meta-data network-config; do
+    cp bak/${j}.cnt ${j};
+  done;
+
+done
+
+## Compute Instance
+for i in 1 2 3; do
+  virt-install --name powerdns-${i} \
+    --ram=2048 --vcpus=1 --cpu host --hvm \
+    --disk path=/vm/tmp/images/powerdns-${i}.img \
+    --disk path=/vm/tmp/images/powerdns-hd2-${i}.img \
+    --import --disk path=/vm/tmp/iso/powerdns-${i}.iso,device=cdrom \
+    --network bridge=enp7,model=virtio,virtualport_type=openvswitch \
+    --console pty,target_type=virtio --noautoconsole &
+done
+</code></pre>
 ### Add repositories
 sudo -s
 vi /etc/yum.repos.d/MariaDB.repo
 
-# MariaDB 10.3 CentOS repository list - created 2019-05-19 22:29 UTC
-# http://downloads.mariadb.org/mariadb/repositories/
+### MariaDB 10.3 CentOS repository list - created 2019-05-19 22:29 UTC
+### http://downloads.mariadb.org/mariadb/repositories/
 [mariadb]
 name = MariaDB
 baseurl = http://yum.mariadb.org/10.3/centos7-amd64
