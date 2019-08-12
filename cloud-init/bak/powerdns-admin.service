@@ -1,0 +1,11 @@
+[Unit]
+Description=PowerDNS-Admin
+After=network.target
+
+[Service]
+WorkingDirectory=/home/dude/glusterFS/powerdns-admin
+Environment="PATH=/home/dude/glusterFS/powerdns-admin"
+ExecStart=/home/dude/glusterFS/powerdns-admin/flask/bin/gunicorn --workers 3 --bind unix:/home/dude/run/powerdns-admin/powerdns-admin.sock run:app
+
+[Install]
+WantedBy=multi-user.target

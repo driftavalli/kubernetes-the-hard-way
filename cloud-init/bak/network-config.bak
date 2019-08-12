@@ -1,17 +1,16 @@
----
-version: 1
-config:
-- type: physical
-  name: ens3
-  subnets:
-  - type: static
-    address: 10.240.0.60
-    netmask: 255.255.255.0
-    dns_search: kvm.kthw.test
-    routes:
-    - network: 0.0.0.0
-      netmask: 0.0.0.0
-      gateway: 10.240.0.1
-- type: nameserver
-  address: [10.240.0.31, 10.240.0.32]
-  search: [host]
+version: 2
+ethernets:
+  ens3:
+    dhcp4: false
+    dhcp6: false
+    addresses:
+      - 10.240.70.60/24
+    optional: true
+    gateway4: 10.240.70.1
+    nameservers:
+      search:
+        - homelab.test
+      addresses:
+        - 10.240.70.81
+        - 10.240.70.82
+        - 10.240.70.83

@@ -1,0 +1,94 @@
+! Configuration File for keepalived
+
+global_defs {
+  notification_email {
+    keepalived@homelab.test
+  }
+  notification_email_from keepalived-1@homelab.test
+! UNIQUE:
+  router_id KEEPALIVED_1
+}
+
+! ***********************************************************************
+! *************************   WEB SERVICES VIP  *************************
+! ***********************************************************************
+vrrp_instance VirtIP_10 {
+  state MASTER
+  interface ens3
+  virtual_router_id 10
+
+! UNIQUE:
+  priority 150
+  advert_int 3
+  smtp_alert
+  authentication {
+      auth_type PASS
+      auth_pass homelab
+  }
+
+  use_mac
+
+  virtual_ipaddress {
+      10.240.70.100
+  }
+}
+
+! ************************   WEB SERVERS  **************************
+
+virtual_server 10.240.70.100 6443 {
+  delay_loop 10
+  lb_algo wrr
+  lb_kind DR
+  persistence_timeout 5
+  protocol TCP
+
+  real_server 10.240.70.10 6443 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+  }
+
+  real_server 10.240.70.11 6443 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+  }
+
+  real_server 10.240.70.12 6443 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+    }
+}
+
+virtual_server 10.240.70.100 80 {
+  delay_loop 10
+  lb_algo wrr
+  lb_kind DR
+  persistence_timeout 5
+  protocol TCP
+
+  real_server 10.240.70.10 80 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+  }
+
+  real_server 10.240.70.11 80 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+  }
+
+  real_server 10.240.70.12 80 {
+      weight 1
+      TCP_CHECK {
+          connect_timeout 3
+      }
+    }
+}
