@@ -220,7 +220,7 @@ Results:
 kube-router.kubeconfig
 ```
 
-## Distribute the Kubernetes Configuration Files
+### Distribute the Kubernetes Configuration Files
 
 Copy the appropriate kubeconfig files to each compute instance:
 
