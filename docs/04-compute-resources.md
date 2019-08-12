@@ -85,7 +85,7 @@ qemu-img resize controller.img +40G
 qemu-img resize worker.img +40G
 ```
 
-We should still have the cloud-iinit files from the previous module.
+We should still have the cloud-init files from the previous module.
 
 <pre><code>
 cat &lt;&lt;EOF | tee ~/tmp/backup/user-data.bak
@@ -313,4 +313,4 @@ Id    Name                           State
 
 ```
 
-Next: [Provisioning a CA and Generating TLS Certificates](04-certificate-authority.md)
+Next: [Provisioning a CA and Generating TLS Certificates](05-certificate-authority.md)
