@@ -14,7 +14,7 @@ gcloud compute ssh controller-0
 
 ### Download and Install the etcd Binaries
 
-Download the official etcd release binaries from the [coreos/etcd](https://github.com/coreos/etcd) GitHub project. To avoid downloading over and over, we will download one time and copy to the controllers.
+Download the official etcd release binaries from the [coreos/etcd](https://github.com/coreos/etcd) GitHub project. To avoid downloading over and over, we will download once and copy to the controllers.
 
 ```
 wget -q --show-progress --https-only --timestamping \
