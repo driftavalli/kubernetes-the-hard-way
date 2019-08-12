@@ -18,4 +18,4 @@ EOF
 sudo systemctl restart crio
 ```
 
-Next: [Configure crio config](12-configure-registries-for-crio-runtime.md)
+Next: [Deploying the DNS Cluster Add-on](13-dns-addon.md)

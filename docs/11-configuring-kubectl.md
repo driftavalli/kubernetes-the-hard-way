@@ -65,4 +65,5 @@ worker-1   Ready     <none>    2m        v1.15.0
 worker-2   Ready     <none>    2m        v1.15.0
 ```
 
-Next: [Provisioning Pod Network Routes](12-pod-network-routes.md)
+Next: [Configure crio config](12-configure-registries-for-crio-runtime.md)
+
