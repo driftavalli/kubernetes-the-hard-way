@@ -139,8 +139,8 @@ Documentation=https://github.com/kubernetes/kubernetes
 
 [Service]
 ExecStart=/usr/local/bin/kube-controller-manager \\
-##  --allocate-node-cidrs=true \\
-##  --cluster-cidr=10.200.0.0/16 \\
+  --allocate-node-cidrs=true \\
+  --cluster-cidr=10.200.0.0/16 \\
   --bind-address=0.0.0.0 \\
   --cluster-name=kubernetes \\
   --cluster-signing-cert-file=/var/lib/kubernetes/ca.pem \\
