@@ -7,7 +7,7 @@ In this lab you will bootstrap the Kubernetes control plane across three compute
 The commands in this lab must be run on each controller instance: `controller-0`, `controller-1`, and `controller-2`. Login to each controller instance using the `gcloud` command. Example:
 
 ```
-gcloud compute ssh controller-0
+ssh controller-0
 ```
 
 ## Provision the Kubernetes Control Plane
@@ -43,9 +43,21 @@ Install the Kubernetes binaries:
 
 ```
 chmod +x kube-apiserver kube-controller-manager kube-scheduler kubectl
+```
+
+```
 sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local/bin/
+```
+
+```
 sudo mv ${HOSTNAME}-key.pem ${HOSTNAME}.pem /var/lib/kubelet/
+```
+
+```
 sudo mv ${HOSTNAME}.kubeconfig /var/lib/kubelet/kubeconfig
+```
+
+```
 sudo mv kube-proxy.kubeconfig /var/lib/kube-proxy/kubeconfig
 ```
 
