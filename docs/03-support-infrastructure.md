@@ -224,7 +224,7 @@ done
 </code></pre>
 
 ### Configure Keepalived
-After allowing a few minutes for the VMs to start, we will login and configure each one. We should be able to login using ssh if we added our public keys to the `user-data` configuration earlier. The Keepalived configuration has been setup with the foreknowledge of the IPs we'll be assigning to our apiservers and the loadbalanced nodes. Keepalived does not currently have an api to dynamically update it's configuration. [Facebook's Katran]() looks to be an interesting project in addition to [github.com GLB](); The choice of loadbalancer will probably be revisited. We have also configured checks for the nginx webserver and the https endpoint. These will be clearer later on.
+After allowing a few minutes for the VMs to start, we will login and configure each one. We should be able to login using ssh if we added our public keys to the `user-data` configuration earlier. The Keepalived configuration has been setup with the foreknowledge of the IPs we'll be assigning to our apiservers and the loadbalanced nodes. Keepalived does not currently have an api to dynamically update it's configuration. [Facebook's Katran](https://github.com/facebookincubator/katran) looks to be an interesting project in addition to [github.com GLB](https://github.com/github/glb-director); The choice of loadbalancer will probably be revisited. We have also configured checks for the nginx webserver and the https endpoint. These will be clearer later on.
 #### LB-1
 <pre><code>
 cat &lt;&lt;EOF | sudo tee /etc/keepalived/keepalived.conf
@@ -1146,6 +1146,7 @@ server {
   }
 }
 }
+EOF
 ```
 
 #### Check the configuration and then restart nginx
@@ -1177,6 +1178,7 @@ local-address=10.240.70.84
 allow-from=127.0.0.0/8,10.0.0.0/8,192.168.0.0/16
 forward-zones-recurse=.=1.1.1.1,.=9.9.9.9
 local-port=5301
+EOF
 ```
 
 ```
@@ -1210,6 +1212,7 @@ customerACLs={"198.168.0.0/16", "10.0.0.0/8"}
 addAction("homelab.test.", PoolAction("auth"))
 addAction(RDRule(), PoolAction("rec"))
 webserver("0.0.0.0:8000", "Passw0rd!", "2b2aec33-788a-4c86-ac4c-1d6d37fc0518")
+EOF
 ```
 
 ```
