@@ -86,8 +86,8 @@ kubectl config set-context default \
 kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
 ```
 
-# The kube-controller-manager Kubernetes Configuration File
-## Generate a kubeconfig file for the kube-controller-manager service:
+### The kube-controller-manager Kubernetes Configuration File
+Generate a kubeconfig file for the kube-controller-manager service:
 ```
 kubectl config set-cluster kubernetes-the-hard-way \
   --certificate-authority=ca.pem \
@@ -120,7 +120,7 @@ Results:
 kube-controller-manager.kubeconfig
 ```
 
-###The kube-scheduler Kubernetes Configuration File
+### The kube-scheduler Kubernetes Configuration File
 Generate a kubeconfig file for the kube-scheduler service:
 
 ```
