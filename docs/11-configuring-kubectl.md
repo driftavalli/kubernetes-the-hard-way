@@ -1,37 +1,31 @@
-# Configuring kubectl for Remote Access
+## Configuring kubectl for Remote Access
+In this lab you will generate a kubeconfig file for the kubectl command line utility based on the admin user credentials.
 
-In this lab you will generate a kubeconfig file for the `kubectl` command line utility based on the `admin` user credentials.
+Run the commands in this lab from the same directory used to generate the admin client certificates.
 
-> Run the commands in this lab from the same directory used to generate the admin client certificates.
-
-## The Admin Kubernetes Configuration File
-
+### The Admin Kubernetes Configuration File
 Each kubeconfig requires a Kubernetes API Server to connect to. To support high availability the IP address assigned to the external load balancer fronting the Kubernetes API Servers will be used.
 
-Retrieve the `kubernetes-the-hard-way` static IP address:
-
+Retrieve the kubernetes-the-hard-way static IP address:
 ```
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
+KUBERNETES_PUBLIC_ADDRESS=$(dig +short apiserver)
 ```
 
-Generate a kubeconfig file suitable for authenticating as the `admin` user:
+~~## `echo $KUBERNETES_PUBLIC_ADDRESS`~~
 
+`cd /home/$USER/projects/kubernetes/CKA/configFiles/certs`
+
+Generate a kubeconfig file suitable for authenticating as the admin user:
 ```
 kubectl config set-cluster kubernetes-the-hard-way \
   --certificate-authority=ca.pem \
   --embed-certs=true \
   --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443
-```
 
-```
 kubectl config set-credentials admin \
   --client-certificate=admin.pem \
   --client-key=admin-key.pem
-```
 
-```
 kubectl config set-context kubernetes-the-hard-way \
   --cluster=kubernetes-the-hard-way \
   --user=admin
@@ -41,15 +35,13 @@ kubectl config set-context kubernetes-the-hard-way \
 kubectl config use-context kubernetes-the-hard-way
 ```
 
-## Verification
-
+#### Verification
 Check the health of the remote Kubernetes cluster:
-
 ```
 kubectl get componentstatuses
 ```
 
-> output
+> Output
 
 ```
 NAME                 STATUS    MESSAGE              ERROR
@@ -61,18 +53,16 @@ etcd-1               Healthy   {"health": "true"}
 ```
 
 List the nodes in the remote Kubernetes cluster:
-
 ```
 kubectl get nodes
 ```
 
-> output
-
+> Output
 ```
 NAME       STATUS    ROLES     AGE       VERSION
-worker-0   Ready     <none>    2m        v1.8.0
-worker-1   Ready     <none>    2m        v1.8.0
-worker-2   Ready     <none>    2m        v1.8.0
+worker-0   Ready     <none>    2m        v1.15.0
+worker-1   Ready     <none>    2m        v1.15.0
+worker-2   Ready     <none>    2m        v1.15.0
 ```
 
-Next: [Provisioning Pod Network Routes](11-pod-network-routes.md)
+Next: [Provisioning Pod Network Routes](12-pod-network-routes.md)
