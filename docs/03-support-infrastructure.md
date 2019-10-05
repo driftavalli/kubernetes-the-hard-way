@@ -38,17 +38,21 @@ If everything is setup correctly, you should have a bridge assigned with a stati
 ## Create Base Image for installation of [Keepalived](http://www.keepalived.org)
 We will be using [Ubuntu cloud images](https://cloud-images.ubuntu.com) to build a base image for Keepalived. A lot of the heavy lifting for setting up the server will also be done using [cloud-init](https://cloud-init.io/) which the cloud images support. While not particularly suited for configuration management, we will use it here for now (more suitable options for configuration management for servers include [ansible](https://www.ansible.com/), [chef](https://www.chef.io/), [puppet](https://puppet.com/). Eventually, we will probably replace the setup with [terraform](https://www.terraform.io/) which should make setting up the servers a breeze. Download the image for [Ubuntu 18.04 LTS (Bionic Beaver)](https://cloud-images.ubuntu.com/bionic/current/). I prefer having a folder structure I can easily delete when I am all done. So I will be creating a playground folder and all the files downloaded and created will be stored in that folder.
 
-`mkdir -p ~/tmp/backup ~/tmp/downloads ~/tmp/backingImages ~/tmp/iso ~/tmp/images ~/tmp/sshkeys/`
+```
+mkdir -p ~/tmp/backup \
+  ~/tmp/downloads \
+  ~/tmp/backingImages \
+  ~/tmp/iso ~/tmp/images \
+  ~/tmp/sshkeys/
 
-`cd ~/tmp/downloads`
-
-`wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img`
-
-`cp bionic-server-cloudimg-amd64.img /home/tmp/backingImages/keepalived.img`
+cd ~/tmp/downloads
+wget https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
+cp bionic-server-cloudimg-amd64.img /home/tmp/backingImages/keepalived.img
+```
 
 ### Install Base Image VM in KVM
 #### First Create `user-data`, `meta-data` and `network-config` files.
-Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version from the [keepalived](https://www.keepalived.org/software/keepalived-2.0.17.tar.gz) website. Create password hash using `mkpasswd --method=SHA-512 --rounds=4096`, requires installing `whois`: `sudo apt install whois`. Replace italicized bold variables with your own.
+Ubuntu does not have the most recent version of Keepalived so we will download the tar and install the latest version from the [keepalived](https://www.keepalived.org/software/) website. Create password hash using `mkpasswd --method=SHA-512 --rounds=4096`, requires installing `whois`: `sudo apt install whois`. Replace italicized bold variables with your own.
 
 `cd ~/tmp/sshkeys/`
 
